@@ -1,0 +1,242 @@
+version: 2
+
+semantic_models:
+
+  # ============================================================
+  # USERS
+  # ============================================================
+  - name: users
+    description: "User account and identity data"
+    model: ref('users')
+
+    defaults:
+      agg_time_dimension: signup_date
+
+    entities:
+      - name: user
+        type: primary
+        expr: user_id
+        description: "Unique user entity"
+
+    dimensions:
+      - name: signup_date
+        type: time
+        type_params:
+          time_granularity: day
+
+      - name: region
+        type: categorical
+
+    measures:
+      - name: user_count
+        description: "Count of users"
+        agg: count_distinct
+        expr: user_id
+
+
+  # ============================================================
+  # EVENTS
+  # ============================================================
+  - name: events
+    description: "User behavior and lifecycle events"
+    model: ref('events')
+
+    defaults:
+      agg_time_dimension: event_time
+
+    entities:
+      - name: event
+        type: primary
+        expr: event_id
+        description: "Unique event entity"
+      - name: user
+        type: foreign
+        expr: user_id
+        description: "Event belongs to a user"
+
+    dimensions:
+      - name: event_time
+        type: time
+        type_params:
+          time_granularity: day
+
+      - name: channel
+        type: categorical
+
+      - name: event_name
+        type: categorical
+
+    measures:
+
+      # Original:
+      # count(event_id)
+      # where event_name = "signup_completed"
+      #
+      # count is not one of the supported legacy measure
+      # aggregation types, so this is represented as a
+      # conditional SUM.
+      - name: signup_count
+        description: "Count of completed signups"
+        agg: sum
+        expr: |
+          case
+            when event_name = 'signup_completed' then 1
+            else 0
+          end
+
+      # Original:
+      # count_distinct(user_id)
+      # where event_name IN ("login", "session_start")
+      - name: active_user_count
+        description: "Active users in period"
+        agg: count_distinct
+        expr: |
+          case
+            when event_name in ('login', 'session_start') then user_id
+            else null
+          end
+
+
+  # ============================================================
+  # ORDERS
+  # ============================================================
+  - name: orders
+    description: "Purchase and revenue transactions"
+    model: ref('orders')
+
+    defaults:
+      agg_time_dimension: order_date
+
+    entities:
+      - name: order
+        type: primary
+        expr: order_id
+        description: "Unique order entity"
+
+      # - name: customer
+      #   type: foreign
+      #   expr: customer_id
+      #   description: "Order belongs to a customer"
+
+    dimensions:
+      - name: order_date
+        type: time
+        type_params:
+          time_granularity: day
+
+      - name: region
+        type: categorical
+
+      - name: status
+        type: categorical
+
+    measures:
+
+      # Original:
+      # count(order_id)
+      # where status = "completed"
+      #
+      # count is represented as a conditional SUM.
+      - name: order_count
+        description: "Completed orders"
+        agg: sum
+        expr: |
+          case
+            when status = 'completed' then 1
+            else 0
+          end
+
+      - name: revenue
+        description: "Recognized revenue"
+        agg: sum
+        expr: amount
+
+  - name: metricflow_time_spine
+    description: "Time spine required for MetricFlow metrics"
+    model: ref('metricflow_time_spine')
+    entities:
+      - name: date
+        type: primary
+        expr: date_day
+    dimensions:
+      - name: date_day
+        type: time
+        type_params:
+          time_granularity: day
+
+
+# ==============================================================
+# METRICS
+# ==============================================================
+
+metrics:
+
+  # ------------------------------------------------------------
+  # Daily signups
+  # ------------------------------------------------------------
+  - name: signups
+    description: "Daily signups"
+    type: simple
+    label: "Signups"
+    type_params:
+      measure: signup_count
+
+
+  # ------------------------------------------------------------
+  # Daily active users
+  # ------------------------------------------------------------
+  - name: active_users
+    description: "Daily active users"
+    type: simple
+    label: "Active Users"
+    type_params:
+      measure: active_user_count
+
+
+  # ------------------------------------------------------------
+  # Daily revenue
+  # ------------------------------------------------------------
+  - name: revenue
+    description: "Daily revenue"
+    type: simple
+    label: "Revenue"
+    type_params:
+      measure: revenue
+
+
+  # ------------------------------------------------------------
+  # Daily completed orders
+  # ------------------------------------------------------------
+  - name: orders
+    description: "Daily completed orders"
+    type: simple
+    label: "Orders"
+    type_params:
+      measure: order_count
+
+
+  # ------------------------------------------------------------
+  # Daily average order value
+  #
+  # Original JSON:
+  # aov = revenue / order_count
+  #
+  # The legacy semantic layer represents this naturally as
+  # a ratio metric rather than as a formula measure.
+  # ------------------------------------------------------------
+  - name: average_order_value
+    description: "Daily AOV"
+    type: ratio
+    label: "Average Order Value"
+    type_params:
+      numerator: revenue
+      denominator: orders
+
+# MetricFlow needs this explicit registration block to map the time spine model
+# semantic_models:
+#   - name: metricflow_time_spine
+#     model: ref('metricflow_time_spine')
+#     defaults:
+#       agg_time_dimension: date_day
+#     entities: []
+#     measures: []

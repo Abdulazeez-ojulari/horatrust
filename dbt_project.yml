@@ -1,0 +1,4 @@
+name: 'local_csv_analytics'
+version: '1.0.0'
+profile: 'local_csv_profile' # Links to the profile configuration below
+model-paths: ["models"]      # Tells dbt where to find your data and metric files

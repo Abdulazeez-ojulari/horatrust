@@ -1,0 +1,6 @@
+local_csv_profile:
+  outputs:
+    dev:
+      type: duckdb
+      path: local_analytics.duckdb # DuckDB will automatically create this local file database
+  target: dev

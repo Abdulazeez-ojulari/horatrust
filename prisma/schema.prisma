@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat    = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  question  String
+  response  Json?
+  createdAt DateTime @default(now())
+}
+
+enum ProjectStatus {
+  UPLOADED
+  VALIDATING
+  VALID
+  FAILED
+}
+
+model Project {
+  id        String        @id @default(uuid())
+
+  tenantId  String
+  name      String
+
+  status    ProjectStatus @default(UPLOADED)
+
+  activeVersionId String?
+
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  versions  ProjectVersion[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model ProjectVersion {
+  id        String   @id @default(uuid())
+
+  projectId String
+  tenantId  String
+
+  version   Int
+
+  cloudinaryPublicId String
+  cloudinaryUrl      String
+  cloudinaryResourceType String?
+
+  status ProjectStatus @default(UPLOADED)
+
+  validationError String?
+
+  canonicalSemanticModel Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@index([tenantId, projectId])
+  @@index([tenantId, projectId, status])
+}

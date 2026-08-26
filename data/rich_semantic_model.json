@@ -1,0 +1,232 @@
+{
+  "models": [
+    {
+      "name": "users",
+      "description": "User account and identity data"
+    },
+    {
+      "name": "events",
+      "description": "User behavior and lifecycle events"
+    },
+    {
+      "name": "orders",
+      "description": "Purchase and revenue transactions"
+    }
+  ],
+  "entities": [
+    {
+      "model": "users",
+      "name": "user",
+      "type": "primary_key",
+      "description": "Unique user entity"
+    },
+    {
+      "model": "events",
+      "name": "user",
+      "type": "foreign_key",
+      "description": "Event belongs to a user"
+    },
+    {
+      "model": "orders",
+      "name": "order",
+      "type": "primary_key",
+      "description": "Unique order entity"
+    },
+    {
+      "model": "orders",
+      "name": "customer",
+      "type": "foreign_key",
+      "description": "Order belongs to a customer"
+    }
+  ],
+  "dimensions": [
+    {
+      "model": "users",
+      "name": "signup_date",
+      "type": "time",
+      "hierarchy": [
+        "day",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    {
+      "model": "users",
+      "name": "region",
+      "type": "categorical",
+      "hierarchy": [
+        "city",
+        "region",
+        "country"
+      ]
+    },
+    {
+      "model": "events",
+      "name": "event_date",
+      "type": "time",
+      "hierarchy": [
+        "day",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    {
+      "model": "events",
+      "name": "channel",
+      "type": "categorical"
+    },
+    {
+      "model": "orders",
+      "name": "order_date",
+      "type": "time",
+      "hierarchy": [
+        "day",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    {
+      "model": "orders",
+      "name": "region",
+      "type": "categorical",
+      "hierarchy": [
+        "city",
+        "region",
+        "country"
+      ]
+    }
+  ],
+  "measures": [
+    {
+      "model": "users",
+      "name": "user_count",
+      "aggregation": "count_distinct",
+      "field": "user_id",
+      "description": "Count of users"
+    },
+    {
+      "model": "events",
+      "name": "signup_count",
+      "aggregation": "count",
+      "field": "event_id",
+      "filter": "event_name = \"signup_completed\"",
+      "description": "Count of completed signups"
+    },
+    {
+      "model": "events",
+      "name": "active_user_count",
+      "aggregation": "count_distinct",
+      "field": "user_id",
+      "filter": "event_name IN (\"login\",\"session_start\")",
+      "description": "Active users in period"
+    },
+    {
+      "model": "orders",
+      "name": "order_count",
+      "aggregation": "count",
+      "field": "order_id",
+      "filter": "status = \"completed\"",
+      "description": "Completed orders"
+    },
+    {
+      "model": "orders",
+      "name": "revenue",
+      "aggregation": "sum",
+      "field": "amount",
+      "description": "Recognized revenue"
+    },
+    {
+      "model": "orders",
+      "name": "aov",
+      "aggregation": "formula",
+      "formula": "revenue / order_count",
+      "description": "Average order value"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "signups",
+      "base_measure": "signup_count",
+      "grain": "day",
+      "description": "Daily signups"
+    },
+    {
+      "name": "active_users",
+      "base_measure": "active_user_count",
+      "grain": "day",
+      "description": "Daily active users"
+    },
+    {
+      "name": "revenue",
+      "base_measure": "revenue",
+      "grain": "day",
+      "description": "Daily revenue"
+    },
+    {
+      "name": "orders",
+      "base_measure": "order_count",
+      "grain": "day",
+      "description": "Daily completed orders"
+    },
+    {
+      "name": "average_order_value",
+      "base_measure": "aov",
+      "grain": "day",
+      "description": "Daily AOV"
+    }
+  ],
+  "joins": [
+    {
+      "from_model": "events",
+      "to_model": "users",
+      "on": "events.user_id = users.user_id",
+      "type": "many_to_one"
+    },
+    {
+      "from_model": "orders",
+      "to_model": "users",
+      "on": "orders.customer_id = users.user_id",
+      "type": "many_to_one"
+    }
+  ],
+  "hierarchies": [
+    {
+      "dimension": "signup_date",
+      "levels": [
+        "day",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    {
+      "dimension": "event_date",
+      "levels": [
+        "day",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    {
+      "dimension": "order_date",
+      "levels": [
+        "day",
+        "month",
+        "quarter",
+        "year"
+      ]
+    },
+    {
+      "dimension": "region",
+      "levels": [
+        "city",
+        "region",
+        "country"
+      ]
+    }
+  ]
+}
